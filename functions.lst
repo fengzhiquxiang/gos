@@ -1,0 +1,93 @@
+     1                                  %define ROWS 80
+     2                                  %define ROWZ 2*ROWS
+     3                                  %define COLUMNS 25
+     4                                  
+     5                                  [BITS 32]
+     6                                  
+     7                                  [SECTION .text]
+     8                                      ; 导入全局变量
+     9                                      extern  display_x
+    10                                      extern  display_y
+    11                                      
+    12                                      ; 导出函数
+    13                                      global	write_mem8
+    14                                      global  print_a
+    15                                      global  print_string_with_color
+    16                                      global  io_delay
+    17                                  
+    18                                      io_delay:
+    19 00000000 90                              nop
+    20 00000001 90                              nop
+    21 00000002 90                              nop
+    22 00000003 90                              nop
+    23 00000004 C3                              ret
+    24                                  
+    25                                      ; ========================================================================
+    26                                      ;                  void write_mem8(int addr, int data);
+    27                                      ; ========================================================================
+    28                                      write_mem8:
+    29 00000005 8B4C2404                        mov ecx,[esp+4]   ;[esp+8]中存放的是地址，将其读入ecx
+    30 00000009 8A442408                        mov al, [esp+8]   ;[esp+16]中存放的是数据，将其读入al
+    31 0000000D 8801                            mov [ecx],al
+    32 0000000F C3                              ret
+    33                                  
+    34                                      print_a:
+    35                                          ;mov eax, dword [display_y]
+    36                                          ;mov ecx, ROWZ
+    37                                          ;mul ecx
+    38                                          ;mov ebx, dword [display_x]
+    39                                          ;add eax, ebx
+    40                                          ;mov edi, eax
+    41 00000010 B078                            mov al, 'x'    
+    42 00000012 B40F                            mov ah, 0x0f   ;不是青色 土红色
+    43 00000014 31FF                            xor edi, edi
+    44 00000016 65668907                        mov [gs:edi], ax        
+    45 0000001A C3                              ret
+    46                                          
+    47                                      ; ========================================================================
+    48                                      ; void print_string_with_color(unsigned char * string, unsigned char color);
+    49                                      ; ========================================================================
+    50                                      print_string_with_color:
+    51 0000001B 8B742404                            mov esi, dword [esp+4]   ;[esp+4]中存放的是地址，将其读入eax
+    52                                          .loop:
+    53 0000001F 803E00                              cmp byte [esi], 0x00
+    54 00000022 7463                                jz   .end
+    55 00000024 803E0A                              cmp byte [esi], 0x0a    ;如果是换行符 \n ，就跳到下一行开头
+    56 00000027 7513                                jnz .display
+    57 00000029 FF05[00000000]                      inc dword [display_y]   ;next line display
+    58 0000002F C705[00000000]0000-                 mov dword [display_x], 0
+    59 00000037 0000               
+    60 00000039 46                                  inc esi
+    61 0000003A EBE3                                jmp .loop
+    62                                          .display:
+    63 0000003C 8A1E                                mov bl,  byte [esi]
+    64 0000003E A1[00000000]                        mov eax, dword [display_y]  ;上次在哪行显示
+    65 00000043 B9A0000000                          mov ecx, ROWZ
+    66 00000048 F7E1                                mul ecx
+    67 0000004A 0305[00000000]                      add eax, dword [display_x]
+    68 00000050 89C7                                mov edi, eax
+    69 00000052 8A7C2408                            mov bh,  byte  [esp+8]    ;颜色
+    70 00000056 8A1E                                mov bl, byte [esi]
+    71 00000058 6566891F                            mov [gs:edi], bx
+    72 0000005C 46                                  inc esi
+    73 0000005D FF05[00000000]                      inc dword [display_x]
+    74 00000063 FF05[00000000]                      inc dword [display_x]
+    75 00000069 813D[00000000]A000-                 cmp dword [display_x], ROWZ
+    76 00000071 0000               
+    77 00000073 72AA                                jb  .loop
+    78 00000075 C705[00000000]0000-                 mov dword [display_x], 0
+    79 0000007D 0000               
+    80 0000007F FF05[00000000]                      inc dword [display_y]   ;next line display
+    81 00000085 EB98                                jmp .loop
+    82                                          .end:
+    83 00000087 C3                                  ret   
+    84                                              
+    85                                          
+    86                                          
+    87                                          
+    88                                          
+    89                                          
+    90                                          
+    91                                          
+    92                                          
+    93                                          
