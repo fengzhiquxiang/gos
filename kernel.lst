@@ -354,40 +354,39 @@
    354 00000014 BC00000A00                      mov esp,  0xA0000  
    355                                  
    356 00000019 E8(00000000)                    call c_start
-   357                                          ;add esp, 0x08      ;C language call stack
+   357                                          
    358                                          
-   359                                          
-   360 0000001E E8(00000000)                    call print_a
-   361                                  
-   362                                          ;  void print_string_with_color(unsigned char * string, unsigned char color);
-   363 00000023 6A04                            push COLOR_RED
-   364 00000025 68[5B000000]                    push string1
-   365 0000002A E8(00000000)                    call print_string_with_color
-   366 0000002F 83C408                          add esp, 0x08
-   367                                          ;  void print_string_with_color(unsigned char * string, unsigned char color);
-   368 00000032 6A03                            push COLOR_Cyan
-   369 00000034 68[5B000000]                    push string1
-   370 00000039 E8(00000000)                    call print_string_with_color
-   371 0000003E 83C408                          add esp, 0x08
-   372                                          ;  void print_string_with_color(unsigned char * string, unsigned char color);
-   373 00000041 6A04                            push COLOR_RED
-   374 00000043 68[5B000000]                    push string1
-   375 00000048 E8(00000000)                    call print_string_with_color
-   376 0000004D 83C408                          add esp, 0x08
-   377                                          
-   378 00000050 F4                              hlt
-   379                                      here:		
-   380 00000051 EBFE                            jmp here
-   381                                  
-   382 00000053 00000000                display_x: dd 0
-   383 00000057 00000000                display_y: dd 0
-   384                                  
-   385                                  ;global hello
-   386 0000005B 0A6964747474747474-     string1: db 0x0a,"idtttttttttttttttttttt!!!!ppppppppppppppppppppppppppp",0x0a,0x00
-   387 00000064 747474747474747474-
-   388 0000006D 747474747421212121-
-   389 00000076 707070707070707070-
-   390 0000007F 707070707070707070-
-   391 00000088 707070707070707070-
-   392 00000091 0A00               
-   393                                  string1_addr equ string1-$$+INIT_ADDR
+   359 0000001E E8(00000000)                    call print_a
+   360                                  
+   361                                          ;  void print_string_with_color(unsigned char * string, unsigned char color);
+   362 00000023 6A04                            push COLOR_RED
+   363 00000025 68[5B000000]                    push string1
+   364 0000002A E8(00000000)                    call print_string_with_color
+   365 0000002F 83C408                          add esp, 0x08
+   366                                          ;  void print_string_with_color(unsigned char * string, unsigned char color);
+   367 00000032 6A03                            push COLOR_Cyan
+   368 00000034 68[5B000000]                    push string1
+   369 00000039 E8(00000000)                    call print_string_with_color
+   370 0000003E 83C408                          add esp, 0x08
+   371                                          ;  void print_string_with_color(unsigned char * string, unsigned char color);
+   372 00000041 6A04                            push COLOR_RED
+   373 00000043 68[5B000000]                    push string1
+   374 00000048 E8(00000000)                    call print_string_with_color
+   375 0000004D 83C408                          add esp, 0x08
+   376                                          
+   377 00000050 F4                              hlt
+   378                                      here:		
+   379 00000051 EBFE                            jmp here
+   380                                  
+   381 00000053 00000000                display_x: dd 0
+   382 00000057 00000000                display_y: dd 0
+   383                                  
+   384                                  ;global hello
+   385 0000005B 0A6964747474747474-     string1: db 0x0a,"idtttttttttttttttttttt!!!!ppppppppppppppppppppppppppp",0x0a,0x00
+   386 00000064 747474747474747474-
+   387 0000006D 747474747421212121-
+   388 00000076 707070707070707070-
+   389 0000007F 707070707070707070-
+   390 00000088 707070707070707070-
+   391 00000091 0A00               
+   392                                  string1_addr equ string1-$$+INIT_ADDR

@@ -31,7 +31,6 @@
         mov esp,  0xA0000  
 
         call c_start
-        ;add esp, 0x08      ;C language call stack
         
         
         call print_a

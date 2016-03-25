@@ -5,43 +5,6 @@ typedef	 int		signed32;
 typedef	 short		signed16;
 typedef	 char		signed8;
 
-/* 门描述符 */
-typedef struct gate
-{
-	unsigned16	offset_low;	/* Offset Low */
-	unsigned16	selector;	/* The selector is a 16 bit value and must point to a valid selector in your GDT. */
-	unsigned8	dcount;		/* 该字段只在调用门描述符中有效。
-				如果在利用调用门调用子程序时引起特权级的转换和堆栈的改变，需要将外层堆栈中的参数复制到内层堆栈。
-				该双字计数字段就是用于说明这种情况发生时，要复制的双字参数的数量。 */
-	unsigned8	attr;		/* P(1) DPL(2) DT(1) TYPE(4) */
-	unsigned16	offset_high;	/* Offset High */
-	/*			
-	type_attr is specified here:
-		
-	   7                           0
-	+---+---+---+---+---+---+---+---+
-	| P |  DPL  | S |    GateType   |
-	+---+---+---+---+---+---+---+---+
-	The bit fields mean:
-							IDT entry, Interrupt Gates
-	Name		Bit		Full Name					Description
-	Offset		48..63	Offset 16..31				Higher part of the offset.
-	P			47		Present						Set to 0 for unused interrupts or for Paging.
-	DPL			45,46	Descriptor Privilege Level	Gate call protection. Specifies which privilege Level the calling Descriptor minimum should have. So hardware and CPU interrupts can be protected from being called out of userspace.
-	S			44		Storage Segment				Set to 0 for interrupt gates (see below).
-	Type		40..43	Gate Type 0..3				Possible IDT gate types :
-													0b0101		0x5	5	80386 32 bit task gate
-													0b0110		0x6	6	80286 16-bit interrupt gate
-													0b0111		0x7	7	80286 16-bit trap gate
-													0b1110		0xE	14	80386 32-bit interrupt gate
-													0b1111		0xF	15	80386 32-bit trap gate
-	0			32..39	Unused 0..7					Have to be 0.
-	Selector	16..31	Selector 0..15				Selector of the interrupt function (to make sense - the kernel's selector). The selector's descriptor's DPL field has to be 0.
-	Offset		0..15	Offset 0..15				Lower part of the interrupt function's offset address (also known as pointer).
-	*/
-}Gate;
-
-#define halt() __asm__ ("cli;hlt\n\t");
 
 #define DISPLAY_INIT_POSITION   0xb8000
 #define POSITION(py)            (DISPLAY_INIT_POSITION+py)    
@@ -76,11 +39,7 @@ extern void print_string_with_color(unsigned char * string, unsigned char color)
 void print_string(unsigned char color, unsigned int py, unsigned char* str);
 void print_string_with_row_cloumn(unsigned char color, unsigned int row, unsigned int cloumn , unsigned char* str);
 void print_append(unsigned char color, unsigned char* string);
-void print_start_with_zzz();
 
-static inline unsigned8 inb(unsigned16 port);
-static inline void outb(unsigned16 port, unsigned8 val);
-void getScancode();/*get keyboard input*/
 
 unsigned int current_row = 0;
 unsigned int current_column = 0;
@@ -88,83 +47,10 @@ unsigned int current_column = 0;
 /*由这个函数开始*/
 void c_start() {
     
-    // print_string_with_row_cloumn(COLOR_GREEN,0,0,"modify and reload gdt");
-    // print_string_with_row_cloumn(COLOR_RED,4,0,"\nhahaha\nheheh\n");
 	print_string_with_color("\nin c print char",COLOR_GREEN);
     print_append(COLOR_GREEN,"\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\n\nc code test!\n");
-    // getScancode();
-
-
-    // print_append(COLOR_GREEN,"vv");
-    // print_append(COLOR_GREEN,"xx");
-   
-	// halt();
-
+    
 	return;
-}
-
-void print_start_with_zzz(){
-	print_append(COLOR_GREEN,"\nzzz -->: ");
-	return;
-}
-
-/*
-PS/2 keyboard code.
-Dependencies:
-inb function and scancode table.
-*/
-void getScancode()
-{
-	print_start_with_zzz();
-	unsigned8 sc=0;
-	while(1){
-		if(inb(0x64) & 0x1){
-			sc=inb(0x60);
-			if(sc==45){
-				print_append(COLOR_CYAN, "x");
-			}
-			if(sc==2){
-				print_append(COLOR_CYAN, "1");
-			}
-			if(sc==28){
-				print_append(COLOR_CYAN, "\nend of input");
-				print_start_with_zzz();
-				// break;
-			}
-			if(sc==47){
-				break;
-			}	
-		}
-		
-	}
-}
-
-// char getchar()
-// {
-// 	return scancode[getScancode()+1];
-// }
-
-static inline void outb(unsigned16 port, unsigned8 val)
-{
-    asm volatile ( "outb %0, %1" : : "a"(val), "Nd"(port) );
-    /* 
-	 *	d  The d register. 
-	 *	N  Unsigned 8-bit integer constant (for in and out instructions). 
-     * There's an outb %al, $imm8  encoding, for compile-time constant port numbers that fit in 8b.  (N constraint).
-     * Wider immediate constants would be truncated at assemble-time (e.g. "i" constraint).
-     * The  outb  %al, %dx  encoding is the only option for all other cases.
-     * %1 expands to %dx because  port  is a uint16_t.  %w1 could be used if we had the port number a wider C type 
-     */
-}
-// INx
-// Receives a 8/16/32-bit value from an I/O location. Traditional names are inb, inw and inl respectively.
-static inline unsigned8 inb(unsigned16 port)
-{
-    unsigned8 ret;
-    asm volatile ( "inb %[port], %[result]"
-                   : [result] "=a"(ret)   // using symbolic operand names as an example, mainly because they're not used in order
-                   : [port] "Nd"(port) );
-    return ret;
 }
 
 /*
@@ -197,22 +83,21 @@ void print_string(unsigned char color, unsigned int py, unsigned char* str)
 	unsigned char * p = (unsigned char*)POSITION(py);  /*放置要显示的字符*/
 													   /*下一个放置要显示的字符的属性*/
 	while(1){
+		jj:
+		if (*str==0){
+			break;
+		}
 
-		if (*str=='\n'){
+		if(*str == '\n') {
 			current_row++;
 			current_column = 0;	
 			p = (unsigned char *)POSITION(DISPLAY_POSITION(current_row,current_column));
 			++str;
+			goto jj;
 		}
 
-		if (*str==0)
-		{
-			break;
-		}
-
-		*p++=*str;
+		*p++=*str++;
 		*p++=color;
-		str++;
 		if (current_column<DISPLAY_CLOUMN){
 			++current_column;
 		}else{
