@@ -4,7 +4,7 @@ ASMFLAGS = -f elf32
 
 LD=ld
 CC=gcc
-CPP=gcc -E -nostdinc -Iinclude
+#CPP=gcc -E -nostdinc -Iinclude
 
 CFLAGS=-W -nostdlib -nostdinc  -I include -std=gnu99
 #CFLAGS+= -Wno-int-to-pointer-cast  -Wno-pointer-to-int-cast
@@ -57,9 +57,12 @@ boothd.bin: boot.asm
 
 kernel: kernel.asm functions.asm cstart.c
 	${ASM} ${ASMFLAGS} kernel.asm -o kernel.o -l kernel.lst
-	${CC} ${CFLAGS} -c cstart.c -o cstart.o
 	${ASM}  ${ASMFLAGS}  functions.asm -o functions.o -l functions.lst
-	${LD} ${LDFLAGS} kernel.o  cstart.o  functions.o -o kernel
+
+	${CC} ${CFLAGS} -c cstart.c -o cstart.o
+	${CC} ${CFLAGS} -c tasks.c -o tasks.o
+	
+	${LD} ${LDFLAGS} kernel.o  cstart.o  tasks.o functions.o -o kernel
 
 clean:
 	rm -f *.bin kernel *.o *.img *.elf *.map *.lst
