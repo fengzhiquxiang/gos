@@ -19,9 +19,11 @@
     extern print_a
     extern print_string_with_color  ;  void print_string_with_color(unsigned char * string, unsigned char color);
     extern init8259a
-    extern start_clock
+    extern   start_clock
+    extern restart_clock
     extern start_multitasks
     extern task0
+    extern task0_address
 
     global kernel_entry     ;entry
     global display_x    ;define vari
@@ -58,17 +60,18 @@
         ;add eax,idt;idt base address
         ;mov dword [idtPtr+2],eax;init base address
         ;close interrupt
-        cli
+
         ;load idt pointer
         lidt [idtPtr]
     ;init idt OKkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk
 
         call init8259a
-        ;call start_clock
-        int 0x20;clock
-        int 0x80;user
-        int 0x1f;all
-        int 0x00;test 0
+        sti
+        call start_clock
+        ;int 0x20;clock
+        ;int 0x80;user
+        ;int 0x1f;all
+        ;int 0x00;test 0
 
         ;call c_start
 ;processsssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss
@@ -78,7 +81,7 @@
         mov ax, SelectorTSS
         ltr ax
     ;call start_process
-        jmp SelectorTSS1:0
+        ;jmp SelectorTSS1:0
         ;jmp SelectorLDTP0:TASK0ADDRESS
         ;push    SelectorStack3
         ;push    TopOfStack3
@@ -108,7 +111,7 @@
 ALIGN 32
     idt:
         ;门    目标选择子 偏移        DCount   属性
-  int00h:Gate   0x08,      test1Handler, 0,       DA_386IGate
+  int00h:Gate   0x08,      test0Handler, 0,       DA_386IGate
     %rep 30;   60h=0x40
         Gate   0x08,      test1Handler, 0,       DA_386IGate
     %endrep
@@ -143,6 +146,9 @@ int80h: Gate   0x08,      userHandler, 0,       DA_386IGate
         push string1
         call print_string_with_color
         add esp, 0x08
+        cli
+        hlt
+        call restart_clock
 
         iretd
 
@@ -200,7 +206,7 @@ SelectorTSS1      equ  DESC_TSS1 - GDT              ;5*8
 SelectorLDT       equ LDT_IN_GDT - GDT              ;6*8
 ; GDT 选择子 end------------------------------------------
 
-[BITS   32]
+;[BITS   32]
 TSS:
 TSSADDRESS equ $-$$+INIT_ADDR
     DW  0           ; Previous Task Link
@@ -291,13 +297,13 @@ TSS1Len      equ $ - TSS1     ;must have a value equal to or greater than 103
 LDT:
 LDTADDRESS equ $-$$+INIT_ADDR
 ;                            段基址       段界限      属性
-LDT_P0: Descriptor TASK0ADDRESS, TASK0Len - 1, DA_C + DA_32 ; Code, 32 位
+;LDT_P0: Descriptor TASK0ADDRESS, TASK0Len - 1, DA_C + DA_32 ; Code, 32 位
 LDT_P0_RW: Descriptor TASK0_RWADDRESS, TASK0_RWLen - 1, DA_DRW  ; Code, 32 位
 ;LDT_P0: Descriptor 0,     0fffffh,   DA_CR  | DA_32 | DA_LIMIT_4K
 
 LDTLen      equ $ - LDT
 ; LDT 选择子
-SelectorLDTP0    equ LDT_P0    - LDT + SA_TIL
+;SelectorLDTP0    equ LDT_P0    - LDT + SA_TIL
 SelectorLDTP0_RW    equ LDT_P0_RW    - LDT + SA_TIL
 ; END of [SECTION .ldt]
 
@@ -309,7 +315,7 @@ TASK0ADDRESS equ $-$$+INIT_ADDR
         xor edi, edi
         mov [gs:edi], ax        
         ;ret
-
+        ;call task0
     hlt
     jmp $
 TASK0Len equ $ - TASK0

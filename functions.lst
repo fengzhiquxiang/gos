@@ -16,124 +16,130 @@
     16                                      global  io_delay
     17                                      global  init8259a
     18                                      global  start_clock
-    19                                  
-    20                                      init8259a:
-    21                                          ; 1. 往端口20h(主片)或A0h(从片)写入ICW1
-    22 00000000 B011                            mov al,   00010001b
-    23 00000002 E620                            out 0x20, al   ;00010001  =  11h
-    24 00000004 E84F000000                      call io_delay
-    25 00000009 E6A0                            out 0xA0, al
-    26 0000000B E848000000                      call io_delay
-    27                                  
-    28                                          ; 2. 往端口21h(主片)或A1h(从片)写入ICW2
-    29 00000010 B020                            mov al, 00100000b;100000=0x20 IRQ0对应中断向量0x20
-    30 00000012 E621                            out 0x21, al
-    31 00000014 E83F000000                      call io_delay
-    32 00000019 B028                            mov al, 00101000b;00101000=0x28 IRQ8对应中断向量0x28
-    33 0000001B E6A1                            out 0xA1, al
-    34 0000001D E836000000                      call io_delay
-    35                                  
-    36                                          ; 3. 往端口21h(主片)或A1h(从片)写入ICW3
-    37 00000022 B004                            mov al, 00000100b
-    38 00000024 E621                            out 0x21, al
-    39 00000026 E82D000000                      call io_delay
-    40 0000002B B002                            mov al, 00000010b
-    41 0000002D E6A1                            out 0xA1, al
-    42 0000002F E824000000                      call io_delay
-    43                                  
-    44                                          ; 4. 往端口21h(主片)或A1h(从片)写入ICW4
-    45 00000034 B001                            mov al, 00000001b
-    46 00000036 E621                            out 0x21, al
-    47 00000038 E81B000000                      call io_delay
-    48 0000003D E6A1                            out 0xA1, al
-    49 0000003F E814000000                      call io_delay
-    50                                  
-    51 00000044 C3                              ret
-    52                                  
-    53                                      start_clock:
-    54 00000045 B0FE                            mov al, 11111110b   ;only clock interrupt
-    55 00000047 E621                            out 0x21, al        ;master 8259 OCW1
-    56 00000049 E80A000000                      call io_delay
-    57                                  
-    58 0000004E B0FF                            mov al, 11111111b   ;close all interrupt in slave 8259
-    59 00000050 E6A1                            out 0xA1, al        ;slave 8259  OCW1
-    60 00000052 E801000000                      call io_delay
-    61                                  
-    62 00000057 C3                              ret
-    63                                  
-    64                                      io_delay:
-    65 00000058 90                              nop
-    66 00000059 90                              nop
-    67 0000005A 90                              nop
-    68 0000005B 90                              nop
-    69 0000005C C3                              ret
-    70                                  
-    71                                      ; ========================================================================
-    72                                      ;                  void write_mem8(int addr, int data);
-    73                                      ; ========================================================================
-    74                                      write_mem8:
-    75 0000005D 8B4C2404                        mov ecx,[esp+4]   ;[esp+8]中存放的是地址，将其读入ecx
-    76 00000061 8A442408                        mov al, [esp+8]   ;[esp+16]中存放的是数据，将其读入al
-    77 00000065 8801                            mov [ecx],al
-    78 00000067 C3                              ret
-    79                                  
-    80                                      print_a:
-    81                                          ;mov eax, dword [display_y]
-    82                                          ;mov ecx, ROWZ
-    83                                          ;mul ecx
-    84                                          ;mov ebx, dword [display_x]
-    85                                          ;add eax, ebx
-    86                                          ;mov edi, eax
-    87 00000068 B078                            mov al, 'x'    
-    88 0000006A B40F                            mov ah, 0x0f   ;不是青色 土红色
-    89 0000006C 31FF                            xor edi, edi
-    90 0000006E 65668907                        mov [gs:edi], ax        
-    91 00000072 C3                              ret
-    92                                          
-    93                                      ; ========================================================================
-    94                                      ; void print_string_with_color(unsigned char * string, unsigned char color);
-    95                                      ; ========================================================================
-    96                                      print_string_with_color:
-    97 00000073 8B742404                            mov esi, dword [esp+4]   ;[esp+4]中存放的是地址，将其读入eax
-    98                                          .loop:
-    99 00000077 803E00                              cmp byte [esi], 0x00
-   100 0000007A 7463                                jz   .end
-   101 0000007C 803E0A                              cmp byte [esi], 0x0a    ;如果是换行符 \n ，就跳到下一行开头
-   102 0000007F 7513                                jnz .display
-   103 00000081 FF05[00000000]                      inc dword [display_y]   ;next line display
-   104 00000087 C705[00000000]0000-                 mov dword [display_x], 0
-   105 0000008F 0000               
-   106 00000091 46                                  inc esi
-   107 00000092 EBE3                                jmp .loop
-   108                                          .display:
-   109 00000094 8A1E                                mov bl,  byte [esi]
-   110 00000096 A1[00000000]                        mov eax, dword [display_y]  ;上次在哪行显示
-   111 0000009B B9A0000000                          mov ecx, ROWZ
-   112 000000A0 F7E1                                mul ecx
-   113 000000A2 0305[00000000]                      add eax, dword [display_x]
-   114 000000A8 89C7                                mov edi, eax
-   115 000000AA 8A7C2408                            mov bh,  byte  [esp+8]    ;颜色
-   116 000000AE 8A1E                                mov bl, byte [esi]
-   117 000000B0 6566891F                            mov [gs:edi], bx
-   118 000000B4 46                                  inc esi
-   119 000000B5 FF05[00000000]                      inc dword [display_x]
-   120 000000BB FF05[00000000]                      inc dword [display_x]
-   121 000000C1 813D[00000000]A000-                 cmp dword [display_x], ROWZ
-   122 000000C9 0000               
-   123 000000CB 72AA                                jb  .loop
-   124 000000CD C705[00000000]0000-                 mov dword [display_x], 0
-   125 000000D5 0000               
-   126 000000D7 FF05[00000000]                      inc dword [display_y]   ;next line display
-   127 000000DD EB98                                jmp .loop
-   128                                          .end:
-   129 000000DF C3                                  ret   
-   130                                              
-   131                                          
-   132                                          
-   133                                          
-   134                                          
-   135                                          
-   136                                          
+    19                                      global  restart_clock
+    20                                  
+    21                                      init8259a:
+    22                                          ; 1. 往端口20h(主片)或A0h(从片)写入ICW1
+    23 00000000 B011                            mov al,   00010001b
+    24 00000002 E620                            out 0x20, al   ;00010001  =  11h
+    25 00000004 E854000000                      call io_delay
+    26 00000009 E6A0                            out 0xA0, al
+    27 0000000B E84D000000                      call io_delay
+    28                                  
+    29                                          ; 2. 往端口21h(主片)或A1h(从片)写入ICW2
+    30 00000010 B020                            mov al, 00100000b;100000=0x20 IRQ0对应中断向量0x20
+    31 00000012 E621                            out 0x21, al
+    32 00000014 E844000000                      call io_delay
+    33 00000019 B028                            mov al, 00101000b;00101000=0x28 IRQ8对应中断向量0x28
+    34 0000001B E6A1                            out 0xA1, al
+    35 0000001D E83B000000                      call io_delay
+    36                                  
+    37                                          ; 3. 往端口21h(主片)或A1h(从片)写入ICW3
+    38 00000022 B004                            mov al, 00000100b
+    39 00000024 E621                            out 0x21, al
+    40 00000026 E832000000                      call io_delay
+    41 0000002B B002                            mov al, 00000010b
+    42 0000002D E6A1                            out 0xA1, al
+    43 0000002F E829000000                      call io_delay
+    44                                  
+    45                                          ; 4. 往端口21h(主片)或A1h(从片)写入ICW4
+    46 00000034 B001                            mov al, 00000001b
+    47 00000036 E621                            out 0x21, al
+    48 00000038 E820000000                      call io_delay
+    49 0000003D E6A1                            out 0xA1, al
+    50 0000003F E819000000                      call io_delay
+    51                                  
+    52 00000044 C3                              ret
+    53                                  
+    54                                      start_clock:
+    55 00000045 B0FE                            mov al, 11111110b   ;only clock interrupt
+    56 00000047 E621                            out 0x21, al        ;master 8259 OCW1
+    57 00000049 E80F000000                      call io_delay
+    58                                  
+    59 0000004E B0FF                            mov al, 11111111b   ;close all interrupt in slave 8259
+    60 00000050 E6A1                            out 0xA1, al        ;slave 8259  OCW1
+    61 00000052 E806000000                      call io_delay
+    62                                  
+    63 00000057 C3                              ret
+    64                                  
+    65                                      restart_clock:
+    66 00000058 B020                            mov al, 0x20; EOI
+    67 0000005A E620                            out 0x20, al
+    68 0000005C C3                              ret
+    69                                  
+    70                                      io_delay:
+    71 0000005D 90                              nop
+    72 0000005E 90                              nop
+    73 0000005F 90                              nop
+    74 00000060 90                              nop
+    75 00000061 C3                              ret
+    76                                  
+    77                                      ; ========================================================================
+    78                                      ;                  void write_mem8(int addr, int data);
+    79                                      ; ========================================================================
+    80                                      write_mem8:
+    81 00000062 8B4C2404                        mov ecx,[esp+4]   ;[esp+8]中存放的是地址，将其读入ecx
+    82 00000066 8A442408                        mov al, [esp+8]   ;[esp+16]中存放的是数据，将其读入al
+    83 0000006A 8801                            mov [ecx],al
+    84 0000006C C3                              ret
+    85                                  
+    86                                      print_a:
+    87                                          ;mov eax, dword [display_y]
+    88                                          ;mov ecx, ROWZ
+    89                                          ;mul ecx
+    90                                          ;mov ebx, dword [display_x]
+    91                                          ;add eax, ebx
+    92                                          ;mov edi, eax
+    93 0000006D B078                            mov al, 'x'    
+    94 0000006F B40F                            mov ah, 0x0f   ;不是青色 土红色
+    95 00000071 31FF                            xor edi, edi
+    96 00000073 65668907                        mov [gs:edi], ax        
+    97 00000077 C3                              ret
+    98                                          
+    99                                      ; ========================================================================
+   100                                      ; void print_string_with_color(unsigned char * string, unsigned char color);
+   101                                      ; ========================================================================
+   102                                      print_string_with_color:
+   103 00000078 8B742404                            mov esi, dword [esp+4]   ;[esp+4]中存放的是地址，将其读入eax
+   104                                          .loop:
+   105 0000007C 803E00                              cmp byte [esi], 0x00
+   106 0000007F 7463                                jz   .end
+   107 00000081 803E0A                              cmp byte [esi], 0x0a    ;如果是换行符 \n ，就跳到下一行开头
+   108 00000084 7513                                jnz .display
+   109 00000086 FF05[00000000]                      inc dword [display_y]   ;next line display
+   110 0000008C C705[00000000]0000-                 mov dword [display_x], 0
+   111 00000094 0000               
+   112 00000096 46                                  inc esi
+   113 00000097 EBE3                                jmp .loop
+   114                                          .display:
+   115 00000099 8A1E                                mov bl,  byte [esi]
+   116 0000009B A1[00000000]                        mov eax, dword [display_y]  ;上次在哪行显示
+   117 000000A0 B9A0000000                          mov ecx, ROWZ
+   118 000000A5 F7E1                                mul ecx
+   119 000000A7 0305[00000000]                      add eax, dword [display_x]
+   120 000000AD 89C7                                mov edi, eax
+   121 000000AF 8A7C2408                            mov bh,  byte  [esp+8]    ;颜色
+   122 000000B3 8A1E                                mov bl, byte [esi]
+   123 000000B5 6566891F                            mov [gs:edi], bx
+   124 000000B9 46                                  inc esi
+   125 000000BA FF05[00000000]                      inc dword [display_x]
+   126 000000C0 FF05[00000000]                      inc dword [display_x]
+   127 000000C6 813D[00000000]A000-                 cmp dword [display_x], ROWZ
+   128 000000CE 0000               
+   129 000000D0 72AA                                jb  .loop
+   130 000000D2 C705[00000000]0000-                 mov dword [display_x], 0
+   131 000000DA 0000               
+   132 000000DC FF05[00000000]                      inc dword [display_y]   ;next line display
+   133 000000E2 EB98                                jmp .loop
+   134                                          .end:
+   135 000000E4 C3                                  ret   
+   136                                              
    137                                          
    138                                          
    139                                          
+   140                                          
+   141                                          
+   142                                          
+   143                                          
+   144                                          
+   145                                          

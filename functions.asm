@@ -16,6 +16,7 @@
     global  io_delay
     global  init8259a
     global  start_clock
+    global  restart_clock
 
     init8259a:
         ; 1. 往端口20h(主片)或A0h(从片)写入ICW1
@@ -59,6 +60,11 @@
         out 0xA1, al        ;slave 8259  OCW1
         call io_delay
 
+        ret
+
+    restart_clock:
+        mov al, 0x20; EOI
+        out 0x20, al
         ret
 
     io_delay:
